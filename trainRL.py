@@ -165,14 +165,13 @@ for e in tqdm(
     range(EPOCHS), desc=f"{Fore.GREEN}Epochs{Style.RESET_ALL}", position=1, leave=False
 ):
     # load models
-    p1 = Quarto_bot(model=policy_net)
-    p2 = Quarto_bot(model=policy_net)  # self play
+    p1 = Quarto_bot(
+        model=policy_net, deterministic=False, temperature=TEMPERATURE_EXPLORE
+    )
+    p2 = Quarto_bot(
+        model=policy_net, deterministic=False, temperature=TEMPERATURE_EXPLORE
+    )  # self play
 
-    # modify the bots to use different temperatures for exploration and exploitation
-    p1.DETERMINISTIC = False
-    p1.TEMPERATURE = TEMPERATURE_EXPLORE
-    p2.DETERMINISTIC = False
-    p2.TEMPERATURE = TEMPERATURE_EXPLORE
     logger.debug(f"Using temperatures: p1={p1.TEMPERATURE}, p2={p2.TEMPERATURE}")
 
     logger.debug("Generating experience for epoch %d", e + 1)
@@ -192,7 +191,6 @@ for e in tqdm(
         n_last_states=n_last_states,
         number_of_matches=MATCHES_PER_EPOCH,
         steps_per_batch=STEPS_PER_EPOCH,
-        experiment_name=f"epoch_{e + 1}",
         PROGRESS_MESSAGE=f"{Fore.YELLOW}Generating experience for epoch {e + 1}{Style.RESET_ALL}",
     )
 
@@ -299,9 +297,11 @@ for e in tqdm(
     _f_fname = policy_net.export_model(_fname)
     checkpoints_files.append(_f_fname)
 
+    # modify the bots to use different temperatures for exploration and exploitation
     # Ignore the last epoch, as it is the current model
     p1.DETERMINISTIC = True
-    p1.TEMPERATURE = TEMPERATURE_EXPLOIT
+    p1.TEMPERATURE = 0  # zeroed to validate!
+    # p1.TEMPERATURE = TEMPERATURE_EXPLOIT # Not used in exploitation
     contest_results = run_contest(
         player=p1,
         rivals=checkpoints_files[:-1],  # rivals are the previous epochs
