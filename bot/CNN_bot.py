@@ -19,6 +19,7 @@ from quartopy import BotAI, Piece, QuartoGame
 from utils.logger import logger
 import numpy as np
 import torch
+import os
 
 logger.debug("Loading CNN_bot...")
 
@@ -26,10 +27,20 @@ logger.debug("Loading CNN_bot...")
 class Quarto_bot(BotAI):
     @property
     def name(self) -> str:
-        return "CNN_bot"
+        if hasattr(self, "model_path"):
+            return f"CNN_bot|{self.model_path}"
+        elif hasattr(self, "model_name"):
+            return f"CNN_bot|{self.model_name}"
+        else:
+            return "CNN_bot|random_weights"
 
     def __init__(
-        self, *, model_path: str | None = None, model: QuartoCNN | None = None
+        self,
+        *,
+        model_path: str | None = None,
+        model: QuartoCNN | None = None,
+        deterministic: bool = True,
+        temperature: float = 0.1,
     ):
         """
         Initializes the CNN bot.
@@ -39,6 +50,13 @@ class Quarto_bot(BotAI):
 
         ``model``: QuartoCNN | None
             An instance of QuartoCNN. If provided, it will be used instead of loading from a file.
+
+        ``deterministic``: bool
+            If True, the model will select the most probable action. Default is True.
+
+        ``temperature``: float
+            Controls the randomness of the selection. Higher values lead to more exploration.
+            Only applicable if ``deterministic`` is False. Default is 0.1.
 
         ## Attributes
         ``DETERMINISTIC``: bool
@@ -55,27 +73,30 @@ class Quarto_bot(BotAI):
         if model_path:
             logger.debug(f"Loading model from {model_path}")
             self.model = QuartoCNN.from_file(model_path)
+            self.model_path = os.path.basename(model_path)
         elif model:
             assert isinstance(
                 model, QuartoCNN
             ), "Provided model must be an instance of QuartoCNN."
 
             self.model = model
-            logger.debug("Using provided model instance")
+            self.model_name = model.name
+            logger.debug(f"Using provided model instance {self.model_name}")
+
         else:
             logger.debug("Loading model with random weights")
             self.model = QuartoCNN()
         logger.debug("Model loaded successfully")
 
-        self.recalculate = True  # Recalculate the model on each turn
+        self._recalculate = True  # Recalculate the model on each turn
         self.selected_piece: Piece
         self.board_position: tuple[int, int]
         # If True, the model will select the most probable action
-        self.DETERMINISTIC: bool = True
+        self.DETERMINISTIC: bool = deterministic
 
         # Controls the randomness of the selection. Higher values lead to more exploration.
         # Only applicable if ``DETERMINISTIC`` is False.
-        self.TEMPERATURE: float = 0.1
+        self.TEMPERATURE: float = temperature
 
     # ####################################################################
     def calculate(
@@ -92,7 +113,7 @@ class Quarto_bot(BotAI):
         ## Returns
 
         """
-        if self.recalculate:
+        if self._recalculate:
             board_matrix = game.game_board.encode()
             if isinstance(game.selected_piece, Piece):
                 piece_onehot = game.selected_piece.vectorize_onehot()
@@ -111,7 +132,7 @@ class Quarto_bot(BotAI):
             batch_size = self.board_pos_onehot_cached.shape[0]
             assert batch_size == 1, f"Expected batch size of 1, got {batch_size}."
 
-            self.recalculate = False  # Do not recalculate until the next turn
+            self._recalculate = False  # Do not recalculate until the next turn
 
         # load from cached values
         _idx_piece: int = self.select_piece_onehot_cached[0, ith_try].item()  # type: ignore
@@ -145,6 +166,6 @@ class Quarto_bot(BotAI):
     ) -> tuple[int, int]:
         """Places the selected piece on the game board at a random valid position."""
         if ith_option == 0:
-            self.recalculate = True
+            self._recalculate = True
         board_position, _ = self.calculate(game, ith_option)
         return board_position

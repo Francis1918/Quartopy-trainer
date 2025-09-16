@@ -140,7 +140,6 @@ def gen_experience(
     *,
     p1_bot: BotAI,
     p2_bot: BotAI,
-    experiment_name: str,
     n_last_states: int = 10,
     number_of_matches: int = 1000,
     steps_per_batch: int = 10_000,
@@ -155,16 +154,14 @@ def gen_experience(
 
     batch_size = steps_per_batch
 
-    match_dir = f"./partidas_guardadas/{experiment_name}/{datetime.now().strftime('%Y%m%d_%H%M')}/"
-
-    results = play_games(
+    results, win_rate = play_games(
         matches=number_of_matches,
         player1=p1_bot,
         player2=p2_bot,
         delay=0,
         verbose=verbose,
-        match_dir=match_dir,
         PROGRESS_MESSAGE=PROGRESS_MESSAGE,
+        save_match=False,
     )
 
     logger.debug(
@@ -172,15 +169,15 @@ def gen_experience(
     )
 
     p_all = pd.DataFrame()
-    for match_path, result in tqdm(
-        results.items(),
+    for i_match, result in tqdm(
+        enumerate(results),
         desc="Processing matches",
         mininterval=0.3,
         miniters=20,
         position=0,
         leave=False,
     ):
-        logger.debug(f"Processing match: {match_path}, Result: {result}")
+        logger.debug(f"Processing match: {i_match}, Result: {result}")
         p1, p2 = process_match(match_path, result, n_last_states=n_last_states)
 
         p_all = pd.concat([p_all, p1], ignore_index=True)
