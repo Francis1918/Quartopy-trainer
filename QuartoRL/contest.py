@@ -23,7 +23,7 @@ def run_contest(
     matches: int = 100,
     rivals_clip: int = -1,
     verbose: bool = True,
-    match_dir: str = "./partidas_guardadas/",
+    mode_2x2: bool = False,
     PROGRESS_MESSAGE: str = "Playing tournament matches...",
 ):
     """Run a contest between a player and multiple rivals.
@@ -34,7 +34,6 @@ def run_contest(
         matches (int): Total number of matches to play against each rival.
         rivals_clip (int): Limit the number of rivals to consider. -1 means no limit.
         verbose (bool): Whether to print detailed logs.
-        match_dir (str): Directory to save match files.
     """
     n_rivals = len(rivals)
     logger.debug(f"Running contest with {n_rivals} rivals, {matches} matches")
@@ -43,7 +42,7 @@ def run_contest(
     if rivals_clip == -1:
         logger.debug("No clipping of rivals, using all available rivals")
     elif rivals_clip > n_rivals:
-        logger.debug(
+        logger.warning(
             f"Cannot clip to requested {rivals_clip}. Playing against all {n_rivals} rivals"
         )
 
@@ -61,32 +60,32 @@ def run_contest(
         rival = rival_class(model_path=rival_file)
 
         logger.debug(f"Playing against rival {idx + 1}/{len(rivals)}: {rival.name}")
-        results_p1 = play_games(
+        _, win_rate_p1 = play_games(
             matches=matches // 2,
             player1=player,
             player2=rival,
             verbose=verbose,
-            match_dir=match_dir,
-            return_file_paths=False,
+            save_match=False,
+            mode_2x2=mode_2x2,
             PROGRESS_MESSAGE=PROGRESS_MESSAGE,
         )
-        logger.debug(results_p1)
-        results[idx]["wins"] += results_p1["P1"]
-        results[idx]["losses"] += results_p1["P2"]
-        results[idx]["draws"] += results_p1["Empates"]
+        logger.debug(win_rate_p1)
+        results[idx]["wins"] += win_rate_p1["Player 1"]
+        results[idx]["losses"] += win_rate_p1["Player 2"]
+        results[idx]["draws"] += win_rate_p1["Tie"]
 
-        results_p2 = play_games(
+        _, win_rate_p2 = play_games(
             matches=matches // 2,
             player1=rival,
             player2=player,
             verbose=verbose,
-            match_dir=match_dir,
-            return_file_paths=False,
+            save_match=False,
+            mode_2x2=mode_2x2,
             PROGRESS_MESSAGE=PROGRESS_MESSAGE,
         )
-        logger.debug(results_p2)
-        results[idx]["wins"] += results_p2["P2"]
-        results[idx]["losses"] += results_p2["P1"]
-        results[idx]["draws"] += results_p2["Empates"]
+        logger.debug(win_rate_p2)
+        results[idx]["wins"] += win_rate_p2["Player 2"]
+        results[idx]["losses"] += win_rate_p2["Player 1"]
+        results[idx]["draws"] += win_rate_p2["Tie"]
 
     return results
