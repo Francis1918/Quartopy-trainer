@@ -14,6 +14,8 @@ Python 3
 """
 
 from models.CNN1 import QuartoCNN
+from models.NN_abstract import NN_abstract
+
 from quartopy import BotAI, Piece, QuartoGame
 
 from utils.logger import logger
@@ -76,8 +78,8 @@ class Quarto_bot(BotAI):
             self.model_path = os.path.basename(model_path)
         elif model:
             assert isinstance(
-                model, QuartoCNN
-            ), "Provided model must be an instance of QuartoCNN."
+                model, NN_abstract
+            ), "Provided model must be a derived class of ``NN_abstract``."
 
             self.model = model
             self.model_name = model.name

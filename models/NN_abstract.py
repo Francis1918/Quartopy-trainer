@@ -99,7 +99,7 @@ class NN_abstract(ABC, torch.nn.Module):
                 "$__filedir__$/", base_dir + "/"
             )
 
-        file_path = path.join(checkpoint_folder, self.name, checkpoint_name)
+        file_path = path.join(checkpoint_folder, checkpoint_name)
 
         makedirs(path.dirname(file_path), exist_ok=True)
         torch.save(self.state_dict(), file_path)

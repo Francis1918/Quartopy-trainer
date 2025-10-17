@@ -24,7 +24,8 @@ from colorama import init, Fore, Style
 # ---- PARAMS ----
 logger.info("Imports done.")
 
-EXPERIMENT_NAME = "EXP_id03"
+EXPERIMENT_NAME = "xyz"
+CHECKPOINT_FOLDER = f"./CHECKPOINTS/{EXPERIMENT_NAME}/"
 
 BATCH_SIZE = 256
 # When True, checks for winning in 2x2 squares. False, only in rows, columns and diagonals.
@@ -201,7 +202,7 @@ for e in tqdm(
     # ------- END OF EPOCH -------
     # Save the model at the end of each epoch
     _fname = checkpoint_name_generator(e + 1)
-    _f_fname = policy_net.export_model(_fname)
+    _f_fname = policy_net.export_model(_fname, checkpoint_folder=CHECKPOINT_FOLDER)
     checkpoints_files.append(_f_fname)
 
     # We're also using a learning rate scheduler. Like the gradient clipping,
