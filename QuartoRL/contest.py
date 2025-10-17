@@ -20,6 +20,7 @@ def run_contest(
     player: BotAI,
     rivals: list[str],
     rival_class: type[BotAI],
+    rival_options: dict = {},
     matches: int = 100,
     rivals_clip: int = -1,
     verbose: bool = True,
@@ -57,7 +58,7 @@ def run_contest(
         lambda: {"wins": 0, "losses": 0, "draws": 0}
     )
     for idx, rival_file in rivals_selected.items():
-        rival = rival_class(model_path=rival_file)
+        rival = rival_class(model_path=rival_file, **rival_options)
 
         logger.debug(f"Playing against rival {idx + 1}/{len(rivals)}: {rival.name}")
         _, win_rate_p1 = play_games(

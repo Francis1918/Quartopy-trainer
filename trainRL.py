@@ -24,7 +24,7 @@ from colorama import init, Fore, Style
 # ---- PARAMS ----
 logger.info("Imports done.")
 
-EXPERIMENT_NAME = "xyz"
+EXPERIMENT_NAME = "EXPLORE_0_TEMP"
 CHECKPOINT_FOLDER = f"./CHECKPOINTS/{EXPERIMENT_NAME}/"
 
 BATCH_SIZE = 256
@@ -54,10 +54,10 @@ N_LAST_STATES_INIT: int = 2
 N_LAST_STATES_FINAL: int = 16  # 16 is all states in 4x4 board
 
 # temperature for exploration, higher values lead to more exploration
-TEMPERATURE_EXPLORE = 0.5  # view test of temperature
+TEMPERATURE_EXPLORE = 2  # view test of temperature
 
 # temperature for exploitation, lower values lead to more exploitation
-TEMPERATURE_EXPLOIT = 0.1
+TEMPERATURE_EXPLOIT = 0.2
 
 # number of players to plot in the win rate graph, -1 means all players
 N_PLAYERS_PLOT = 7
@@ -213,13 +213,19 @@ for e in tqdm(
     # ------- RUN CONTEST -----------
     # modify the bots to use different temperatures for exploration and exploitation
     # Ignore the last epoch, as it is the current model
-    p1.DETERMINISTIC = True
-    p1.TEMPERATURE = 0  # zeroed to validate!
-    # p1.TEMPERATURE = TEMPERATURE_EXPLOIT # Not used in exploitation
+
+    # Always False!
+    # p1.DETERMINISTIC = False  # When True always repeat moves, is like only 1 game!
+    p1.TEMPERATURE = TEMPERATURE_EXPLOIT
+
     contest_results = run_contest(
         player=p1,
         rivals=checkpoints_files[:-1],  # rivals are the previous epochs
         rival_class=Quarto_bot,
+        rival_options={
+            "deterministic": False,
+            "temperature": TEMPERATURE_EXPLOIT,
+        },
         rivals_clip=RIVALS_IN_TOURNAMENT,  # limit the number of rivals for evaluation, -1 means no limit
         matches=N_MATCHES_EVAL,
         verbose=False,
