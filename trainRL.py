@@ -27,7 +27,7 @@ import numpy as np
 # ---- PARAMS ----
 logger.info("Imports done.")
 
-EXPERIMENT_NAME = "EXPLORE_0_TEMP"
+EXPERIMENT_NAME = "BT_1"
 CHECKPOINT_FOLDER = f"./CHECKPOINTS/{EXPERIMENT_NAME}/"
 
 BATCH_SIZE = 256
@@ -62,12 +62,6 @@ TEMPERATURE_EXPLORE = 2  # view test of temperature
 # temperature for exploitation, lower values lead to more exploitation
 TEMPERATURE_EXPLOIT = 0.2
 
-# number of players to plot in the win rate graph, -1 means all players
-N_PLAYERS_PLOT = 7
-
-# number of rival points to plot for each player in the win rate graph
-POINTS_BY_RIVAL = 50  # must be less than or equal to RIVALS_IN_TOURNAMENT
-
 
 # ###########################
 MAX_GRAD_NORM = 1.0
@@ -84,9 +78,8 @@ target_net = QuartoCNN()
 # Set target net weights to policy net weights
 target_net.load_state_dict(policy_net.state_dict())
 
-checkpoint_name_generator = lambda epoch: f"{EXPERIMENT_NAME}_epoch_{epoch:04d}"
-checkpoint_name = checkpoint_name_generator(0)
-_fcheckpoint_name = policy_net.export_model(checkpoint_name)
+CKPT_NAME_GEN = lambda epoch: f"{EXPERIMENT_NAME}_epoch_{epoch:04d}"
+_fcheckpoint_name = policy_net.export_model(CKPT_NAME_GEN(0))
 # list of file names by epoch
 checkpoints_files: list[str] = [_fcheckpoint_name]
 
@@ -211,7 +204,7 @@ for e in tqdm(
     # ------- END OF EPOCH -------
     loss_data["epoch_values"].append(step_i)
     # Save the model at the end of each epoch
-    _fname = checkpoint_name_generator(e + 1)
+    _fname = CKPT_NAME_GEN(e + 1)
     _f_fname = policy_net.export_model(_fname, checkpoint_folder=CHECKPOINT_FOLDER)
     checkpoints_files.append(_f_fname)
 

@@ -1,7 +1,10 @@
 .vscode/
 partidas_guardadas/
+# images
+*.svg
+
 # pytorch model files
-*.pt 
+*.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
