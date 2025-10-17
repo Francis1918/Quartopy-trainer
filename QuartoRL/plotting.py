@@ -15,8 +15,49 @@ Python 3
 
 import matplotlib.pyplot as plt
 import numpy as np
+from os import path
+from datetime import datetime
 
 plt.ion()  # Enable interactive mode
+
+
+def plot_loss(
+    loss_data: dict[str, list[float | int]],
+    FREQ_EPOCH_SAVING: int = 200,
+    FOLDER_SAVE: str = "./",
+    FIG_NAME=lambda epoch: f"{datetime.now().strftime('%Y%m%d_%H%M')}-loss_{epoch:04d}.svg",
+):
+    """
+    FREQ_EPOCH_SAVING: int if -1 no saving, else save every n epochs
+    """
+    epoch_values = loss_data["epoch_values"]
+    loss_values = loss_data["loss_values"]
+    # Plot loss values
+    plt.figure(2, figsize=(10, 5), clear=True)
+    plt.plot(
+        np.arange(len(loss_values)), loss_values, ".", alpha=0.6, label="Loss values"
+    )
+    # Add vertical lines at each epoch value
+    for epoch in epoch_values:
+        plt.axvline(x=epoch, color="r", linestyle="--", alpha=0.3)
+
+    plt.plot([], [], "r--", alpha=0.3, label="Epoch boundaries")
+    plt.xlabel("Training iterations")
+    plt.ylabel("Loss")
+    plt.title(f"Training Loss up to epoch {len(epoch_values)}")
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.draw()
+    plt.pause(0.001)
+
+    # Save the figure at regular intervals
+    if len(epoch_values) % FREQ_EPOCH_SAVING == 0 and FREQ_EPOCH_SAVING != -1:
+        plt.savefig(
+            path.join(FOLDER_SAVE, FIG_NAME(len(epoch_values))),
+            dpi=300,
+            bbox_inches="tight",
+        )
 
 
 def plot_contest_results(epochs_results: list[dict[int, dict[str, int]]]):

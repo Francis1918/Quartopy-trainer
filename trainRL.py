@@ -15,11 +15,14 @@ from QuartoRL import (
     run_contest,
     plot_contest_results,
     DQN_training_step,
+    plot_loss,
 )
 from tqdm.auto import tqdm
 import pprint
 import pickle
 from colorama import init, Fore, Style
+import matplotlib.pyplot as plt
+import numpy as np
 
 # ---- PARAMS ----
 logger.info("Imports done.")
@@ -102,6 +105,10 @@ scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, EPOCHS, eta_mi
 loss_fcn = nn.SmoothL1Loss()
 
 epochs_results = []  # to store the results of each epoch
+loss_data: dict[str, list[float | int]] = {
+    "loss_values": [],
+    "epoch_values": [],  # iter value at the end of each epoch
+}  # to track loss values during training
 # ###########################
 init(autoreset=True)
 
@@ -117,6 +124,7 @@ logger.info("Hyperparameters loaded.")
 logger.info("Starting training...")
 
 # -------------------------- TRAINING LOOP ---------------------------
+step_i = -1  # counter of training steps
 # Outer loop over epochs
 for e in tqdm(
     range(EPOCHS), desc=f"{Fore.GREEN}Epochs{Style.RESET_ALL}", position=1, leave=True
@@ -160,7 +168,7 @@ for e in tqdm(
                 f"Not enough data to sample a full batch. Expected {BATCH_SIZE}, got {exp_batch.shape[0]}"
             )
             continue
-
+        step_i += 1
         # ---- TRAINING STEP ----
         state_action_values, expected_state_action_values = DQN_training_step(
             policy_net=policy_net,
@@ -170,6 +178,7 @@ for e in tqdm(
             loss_fcn=loss_fcn,  # type: ignore
         )
         loss = loss_fcn(state_action_values, expected_state_action_values)
+        loss_data["loss_values"].append(loss.item())
 
         # Optimize the model
         optimizer.zero_grad()
@@ -200,6 +209,7 @@ for e in tqdm(
             target_net.load_state_dict(target_net_state_dict)
 
     # ------- END OF EPOCH -------
+    loss_data["epoch_values"].append(step_i)
     # Save the model at the end of each epoch
     _fname = checkpoint_name_generator(e + 1)
     _f_fname = policy_net.export_model(_fname, checkpoint_folder=CHECKPOINT_FOLDER)
@@ -238,12 +248,13 @@ for e in tqdm(
     # store results
     epochs_results.append(dict(contest_results))
     with open(f"{EXPERIMENT_NAME}.pkl", "wb") as f:
-        pickle.dump(epochs_results, f)
+        pickle.dump({"epochs_results": epochs_results, "loss_values": loss_data}, f)
 
     # ------- PLOT RESULTS -----------
     plot_contest_results(epochs_results)
+    plot_loss(loss_data, FREQ_EPOCH_SAVING=200, FOLDER_SAVE=CHECKPOINT_FOLDER)
+
 
 logger.info("Training completed.")
-import matplotlib.pyplot as plt
 
 plt.show(block=True)
