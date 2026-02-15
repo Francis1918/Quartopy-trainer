@@ -277,6 +277,28 @@ logger.info("Starting training...")
 
 # -------------------------- TRAINING LOOP ---------------------------
 step_i = -1  # counter of training steps
+
+# --- Restore historical training data when resuming ---
+if loaded_epoch > 0:
+    _pkl_path = path.join(CHECKPOINT_FOLDER, f"{EXPERIMENT_NAME}.pkl")
+    if path.exists(_pkl_path):
+        logger.info(f"Loading historical training data from: {_pkl_path}")
+        try:
+            with open(_pkl_path, "rb") as f:
+                _saved = pickle.load(f)
+            epochs_results = _saved.get("epochs_results", epochs_results)
+            loss_data = _saved.get("loss_values", loss_data)
+            win_rate = _saved.get("win_rate", win_rate)
+            q_values_history = _saved.get("q_values_history", q_values_history)
+            if loss_data["epoch_values"]:
+                step_i = loss_data["epoch_values"][-1]
+            logger.info(
+                f"Restored {len(epochs_results)} epochs of historical data "
+                f"({len(loss_data['loss_values'])} loss values, step_i={step_i})"
+            )
+        except Exception as err:
+            logger.warning(f"Could not load historical data: {err}. Starting with empty history.")
+
 # Outer loop over epochs
 for e in tqdm(
     range(EPOCHS), desc=f"{Fore.GREEN}Epochs{Style.RESET_ALL}", position=0, leave=True
