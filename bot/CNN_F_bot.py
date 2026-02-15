@@ -13,10 +13,20 @@ Python 3
 -Donald E. Knuth
 """
 
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from models.CNNfrancis import QuartoCNN
+from utils.env_bootstrap import bootstrap_quartopy_path
 from utils.logger import logger
 import numpy as np
 import torch
+
+bootstrap_quartopy_path(PROJECT_ROOT)
 
 
 def _validate_and_import_quartopy():

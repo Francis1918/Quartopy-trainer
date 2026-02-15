@@ -2,11 +2,17 @@
 Adaptador para cargar modelos CNN de diferentes arquitecturas.
 """
 
+import sys
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pathlib import Path
 from typing import Optional, Tuple
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from models.NN_abstract import NN_abstract
 
 

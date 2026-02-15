@@ -15,6 +15,17 @@ Python 3
 -Kurt Godël
 """
 
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from utils.env_bootstrap import bootstrap_quartopy_path
+
+bootstrap_quartopy_path(PROJECT_ROOT)
+
 from bot.CNN_bot import Quarto_bot
 from bot.CNN_F_bot import Quarto_bot as F_bot
 from QuartoRL import run_contest

@@ -25,6 +25,17 @@ logging.basicConfig(
 )
 logging.info(datetime.now())
 
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from utils.env_bootstrap import bootstrap_quartopy_path
+
+bootstrap_quartopy_path(PROJECT_ROOT)
+
 # exp.board_state[13]
 board_serial = "0000000010000000001000000000000000000000000010000000000001000000000000000000000000000100000000000000000000000000000000000000001000010000000000000000000000000000100000000000000000000000000000000000001000000000000000000010000000000001000000000100000000000000"
 

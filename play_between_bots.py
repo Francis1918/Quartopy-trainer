@@ -11,6 +11,9 @@ Python 3
 "Either mathematics is too big for the human mind or the human mind is more than a machine."
 -Kurt Godël
 """
+from utils.env_bootstrap import bootstrap_quartopy_path
+
+bootstrap_quartopy_path()
 from quartopy import play_games
 from bot.CNN_bot import Quarto_bot
 from bot.CNN_F_bot import Quarto_bot as F_bot

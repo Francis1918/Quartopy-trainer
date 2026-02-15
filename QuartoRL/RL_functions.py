@@ -9,10 +9,19 @@ Python 3
 -Donald E. Knuth
 """
 
+from pathlib import Path
+import sys
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from utils.logger import logger
+from utils.env_bootstrap import bootstrap_quartopy_path
 
 from tensordict import TensorDict
 
+bootstrap_quartopy_path(PROJECT_ROOT)
 from quartopy import play_games, BotAI, Board
 
 import torch

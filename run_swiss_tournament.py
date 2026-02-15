@@ -39,6 +39,9 @@ import logging
 from sys import stdout
 from datetime import datetime
 from models.CNN_uncoupled import QuartoCNN as QuartoCNN_uncoupled
+from utils.env_bootstrap import bootstrap_quartopy_path
+
+bootstrap_quartopy_path()
 
 logging.basicConfig(
     level=logging.INFO,

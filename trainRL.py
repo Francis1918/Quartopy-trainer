@@ -1,3 +1,6 @@
+from utils.env_bootstrap import bootstrap_quartopy_path
+
+bootstrap_quartopy_path()
 from utils.logger import logger
 
 logger.info("Starting Importing...")
@@ -436,3 +439,4 @@ for e in tqdm(
 logger.info("Training completed.")
 
 plt.show(block=True)
+

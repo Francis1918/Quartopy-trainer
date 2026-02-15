@@ -11,6 +11,9 @@ Python 3
 -Kurt Godël
 """
 from bot.human import Quarto_bot as Human_bot
+from utils.env_bootstrap import bootstrap_quartopy_path
+
+bootstrap_quartopy_path()
 from quartopy import play_games
 from bot.CNN_bot import Quarto_bot
 
