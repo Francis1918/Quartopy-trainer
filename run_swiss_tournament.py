@@ -40,6 +40,7 @@ from sys import stdout
 from datetime import datetime
 from models.CNN_uncoupled import QuartoCNN as QuartoCNN_uncoupled
 from utils.env_bootstrap import bootstrap_quartopy_path
+from utils.play_games_compat import play_games_compat
 
 bootstrap_quartopy_path()
 
@@ -68,7 +69,6 @@ def run_swiss_tournament(
     Optional double Swiss where each pairing plays twice (swapping colors).
     """
     from pathlib import Path
-    from quartopy import play_games
     import re
     import pickle
     from datetime import datetime
@@ -180,7 +180,7 @@ def run_swiss_tournament(
             )
 
             # Play first game
-            _, win_rate1 = play_games(
+            _, win_rate1 = play_games_compat(
                 matches=1,
                 player1=bot1,
                 player2=bot2,
@@ -222,7 +222,7 @@ def run_swiss_tournament(
 
             # Double Swiss: play second game with colors swapped
             if double_swiss:
-                _, win_rate2 = play_games(
+                _, win_rate2 = play_games_compat(
                     matches=1,
                     player1=bot2,
                     player2=bot1,

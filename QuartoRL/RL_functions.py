@@ -18,11 +18,12 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from utils.logger import logger
 from utils.env_bootstrap import bootstrap_quartopy_path
+from utils.play_games_compat import play_games_compat
 
 from tensordict import TensorDict
 
 bootstrap_quartopy_path(PROJECT_ROOT)
-from quartopy import play_games, BotAI, Board
+from quartopy import BotAI, Board
 
 import torch
 import numpy as np
@@ -247,7 +248,7 @@ def gen_experience(
     """
     logger.debug("Generating experience...")
 
-    matches_data, _ = play_games(  # _ winrate
+    matches_data, _ = play_games_compat(  # _ winrate
         matches=number_of_matches,
         player1=p1_bot,
         player2=p2_bot,
@@ -256,6 +257,7 @@ def gen_experience(
         PROGRESS_MESSAGE=PROGRESS_MESSAGE,
         save_match=False,
         mode_2x2=mode_2x2,
+        return_match_data=True,
     )
 
     logger.debug(f"Generated experience. Matches played: {number_of_matches}.")

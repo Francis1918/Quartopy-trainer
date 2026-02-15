@@ -1,6 +1,10 @@
+from pathlib import Path
+import os
+
 from utils.env_bootstrap import bootstrap_quartopy_path
 
-bootstrap_quartopy_path()
+PROJECT_ROOT = Path(__file__).resolve().parent
+bootstrap_quartopy_path(PROJECT_ROOT)
 from utils.logger import logger
 
 logger.info("Starting Importing...")
@@ -38,7 +42,10 @@ logger.info("Imports done.")
 # STARTING_NET = "CHECKPOINTS//REF//20251023_1649-_E02_win_rate_epoch_0022.pt"
 STARTING_NET = None  # Set to None to start with random weights
 EXPERIMENT_NAME = "05_LOSS"
-CHECKPOINT_FOLDER = f"./CHECKPOINTS/{EXPERIMENT_NAME}/"
+CHECKPOINTS_ROOT = Path(
+    os.getenv("CHECKPOINTS_ROOT", str(PROJECT_ROOT.parent / "CHECKPOINTS"))
+)
+CHECKPOINT_FOLDER = str(CHECKPOINTS_ROOT / EXPERIMENT_NAME)
 # ARCHITECTURE = QuartoCNN
 ARCHITECTURE = QuartoCNN_uncoupled
 LOSS_APPROACH = "combined_avg"  # Options: "combined_avg", "only_select", "only_place"

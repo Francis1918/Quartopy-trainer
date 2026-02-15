@@ -14,7 +14,7 @@ from bot.human import Quarto_bot as Human_bot
 from utils.env_bootstrap import bootstrap_quartopy_path
 
 bootstrap_quartopy_path()
-from quartopy import play_games
+from utils.play_games_compat import play_games_compat
 from bot.CNN_bot import Quarto_bot
 
 human = Human_bot()
@@ -35,7 +35,7 @@ bot_loss_BT = Quarto_bot(
     deterministic=False,
     temperature=0.1,
 )
-_, win_rate_p1 = play_games(
+_, win_rate_p1 = play_games_compat(
     matches=1,
     player1=bot_loss_BT,
     player2=human,

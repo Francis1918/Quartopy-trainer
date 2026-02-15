@@ -25,7 +25,6 @@ if str(PROJECT_ROOT) not in sys.path:
 from utils.env_bootstrap import bootstrap_quartopy_path
 
 bootstrap_quartopy_path(PROJECT_ROOT)
-from quartopy import play_games
 from bot.CNN_bot import Quarto_bot
 from bot.CNN_F_bot import Quarto_bot as F_bot
 from QuartoRL import run_contest

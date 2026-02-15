@@ -14,7 +14,7 @@ Python 3
 from utils.env_bootstrap import bootstrap_quartopy_path
 
 bootstrap_quartopy_path()
-from quartopy import play_games
+from utils.play_games_compat import play_games_compat
 from bot.CNN_bot import Quarto_bot
 from bot.CNN_F_bot import Quarto_bot as F_bot
 from models.CNN_fdec import QuartoCNNExtended
@@ -100,7 +100,7 @@ N_MATCHES = 500
 VERBOSE = False
 
 ## Games
-res, win_rate_p1 = play_games(
+res, win_rate_p1 = play_games_compat(
     matches=N_MATCHES,
     player1=bot_A,
     player2=bot_B,
@@ -109,7 +109,7 @@ res, win_rate_p1 = play_games(
     mode_2x2=True,
 )
 
-res, win_rate_p2 = play_games(
+res, win_rate_p2 = play_games_compat(
     matches=N_MATCHES,
     player1=bot_B,
     player2=bot_A,

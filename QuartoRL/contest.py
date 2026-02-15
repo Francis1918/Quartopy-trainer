@@ -16,9 +16,10 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from utils.env_bootstrap import bootstrap_quartopy_path
+from utils.play_games_compat import play_games_compat
 
 bootstrap_quartopy_path(PROJECT_ROOT)
-from quartopy import BotAI, play_games
+from quartopy import BotAI
 
 from collections import defaultdict
 from utils.logger import logger
@@ -122,7 +123,7 @@ def run_contest(
         )
 
         logger.debug(f"Playing against rival {rival_name}/{len(rivals)}: {rival.name}")
-        _, win_rate_p1 = play_games(
+        _, win_rate_p1 = play_games_compat(
             matches=matches // 2,
             player1=player,
             player2=rival,
@@ -136,7 +137,7 @@ def run_contest(
         results[rival_name]["losses"] += win_rate_p1["Player 2"]
         results[rival_name]["draws"] += win_rate_p1["Tie"]
 
-        _, win_rate_p2 = play_games(
+        _, win_rate_p2 = play_games_compat(
             matches=matches // 2,
             player1=rival,
             player2=player,
