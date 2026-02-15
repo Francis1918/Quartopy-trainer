@@ -32,6 +32,54 @@ from datetime import datetime
 from os import path
 
 
+def _board_piece_index_grid(board: Board) -> np.ndarray:
+    """
+    Convert a quartopy Board to a 4x4 grid of piece indices.
+    Empty cells are represented as -1.
+    """
+    if hasattr(board, "to_matrix"):
+        m = np.array(board.to_matrix())
+    else:
+        m = np.array(board.encode())
+
+    # Expected one-hot layout: (1, 16, 4, 4) or (16, 4, 4)
+    if m.ndim == 4 and m.shape[0] == 1:
+        m = m[0]
+
+    if m.ndim == 3 and m.shape[0] == 16:
+        occupied = m.sum(axis=0) > 0
+        piece_idx = m.argmax(axis=0)
+        return np.where(occupied, piece_idx, -1)
+
+    # Fallback: already a 4x4 grid
+    if m.ndim == 2 and m.shape == (4, 4):
+        return m.astype(int)
+
+    # Unknown shape fallback
+    return np.full((4, 4), -1, dtype=int)
+
+
+def _plot_board_fallback(board: Board, ax, title: str) -> None:
+    """Fallback board visualization when quartopy Board.plot is unavailable."""
+    grid = _board_piece_index_grid(board)
+    occupancy = (grid >= 0).astype(float)
+
+    ax.imshow(occupancy, cmap="Greys", vmin=0, vmax=1)
+    ax.set_title(title)
+    ax.set_xticks(range(4))
+    ax.set_yticks(range(4))
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    ax.grid(True, color="black", linewidth=0.5, alpha=0.5)
+
+    for r in range(4):
+        for c in range(4):
+            v = grid[r, c]
+            label = "." if v < 0 else str(int(v))
+            color = "black" if v < 0 else "tab:red"
+            ax.text(c, r, label, ha="center", va="center", fontsize=8, color=color)
+
+
 def plot_boards_comp(
     *boards_pair: tuple[Board, Board],
     q_place: torch.Tensor,
@@ -107,8 +155,24 @@ def plot_boards_comp(
 
     # Plot each pair (transposed: rows are board states, columns are pairs)
     for i, (b1, b2) in enumerate(boards_pair):
-        b1.plot(title=b1.name, ax=axes[0, i], show=False)  # type: ignore
-        b2.plot(title=b2.name, ax=axes[1, i], show=False)  # type: ignore
+        t1 = getattr(b1, "name", f"state_{i}")
+        t2 = getattr(b2, "name", f"next_state_{i}")
+
+        if hasattr(b1, "plot"):
+            try:
+                b1.plot(title=t1, ax=axes[0, i], show=False)  # type: ignore[attr-defined]
+            except Exception:
+                _plot_board_fallback(b1, axes[0, i], t1)
+        else:
+            _plot_board_fallback(b1, axes[0, i], t1)
+
+        if hasattr(b2, "plot"):
+            try:
+                b2.plot(title=t2, ax=axes[1, i], show=False)  # type: ignore[attr-defined]
+            except Exception:
+                _plot_board_fallback(b2, axes[1, i], t2)
+        else:
+            _plot_board_fallback(b2, axes[1, i], t2)
 
     # Save the figure at regular intervals
     if current_epoch % FREQ_EPOCH_SAVING == 0 and FREQ_EPOCH_SAVING != -1:
