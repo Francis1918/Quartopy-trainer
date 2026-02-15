@@ -1,5 +1,7 @@
 # Quarto Bot Training Framework
 
+> **IMPORTANTE: Solo se deben modificar los parametros de entrenamiento en `trainRL.py` y `trainRL_resume_latest.py`. NO modificar la arquitectura de la red, los bots, ni las funciones de RL.** Los unicos cambios permitidos son los hiperparametros dentro de la seccion de configuracion de estos dos scripts.
+
 ## Overview
 This project provides a comprehensive framework for training and evaluating AI bots that play the board game Quarto using Deep Q-Learning (DQN). The system supports multiple neural network architectures, loss calculation approaches, and reward functions to develop intelligent game-playing agents through reinforcement learning.
 
@@ -199,6 +201,39 @@ The `runpy.sh` script automatically:
 - Creates log files with timestamps
 - Displays output in terminal (with colors)
 - Strips ANSI color codes from saved logs for readability
+
+## Reglas de Modificacion
+
+### PERMITIDO - Solo parametros en `trainRL.py` y `trainRL_resume_latest.py`:
+```python
+STARTING_NET          # Ruta al checkpoint inicial (None = pesos aleatorios)
+EXPERIMENT_NAME       # Nombre del experimento
+ARCHITECTURE          # QuartoCNN o QuartoCNN_uncoupled (seleccion, NO modificar las clases)
+LOSS_APPROACH         # "combined_avg", "only_select", "only_place"
+REWARD_FUNCTION       # "final", "propagate", "discount"
+GEN_EXPERIENCE_BY_EPOCH  # True/False
+N_MATCHES_EVAL        # Partidas de evaluacion por epoca
+BATCH_SIZE            # Tamano del batch
+EPOCHS                # Numero de epocas
+N_LAST_STATES_INIT    # Estados iniciales del historial
+N_LAST_STATES_FINAL   # Estados finales del historial
+MATCHES_PER_EPOCH     # Partidas de self-play por epoca
+TEMPERATURE_EXPLORE   # Temperatura de exploracion
+TEMPERATURE_EXPLOIT   # Temperatura de explotacion
+FREQ_EPOCH_SAVING     # Frecuencia de guardado
+MAX_GRAD_NORM         # Clipping de gradientes
+LR / LR_F             # Learning rate inicial y final
+TAU                   # Tasa de soft update del target network
+GAMMA                 # Factor de descuento
+BASELINES             # Lista de rivales para evaluacion
+```
+
+### PROHIBIDO - No modificar:
+- `models/` - Arquitecturas de redes neuronales
+- `bot/` - Implementaciones de bots
+- `QuartoRL/` - Funciones de RL (gen_experience, DQN_training_step, etc.)
+- `utils/` - Utilidades del proyecto
+- Logica del loop de entrenamiento dentro de trainRL.py
 
 ## Advanced Features
 - **Replay Buffer**: Experience replay with configurable size
