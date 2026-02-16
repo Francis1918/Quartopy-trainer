@@ -38,10 +38,15 @@ def _board_piece_index_grid(board: Board) -> np.ndarray:
     Convert a quartopy Board to a 4x4 grid of piece indices.
     Empty cells are represented as -1.
     """
-    if hasattr(board, "to_matrix"):
+    # Use encode() which returns (1, 16, 4, 4) one-hot encoding
+    # to_matrix() returns (1, 4, 4, 4) which is not compatible with visualization
+    if hasattr(board, "encode"):
+        m = np.array(board.encode())
+    elif hasattr(board, "to_matrix"):
         m = np.array(board.to_matrix())
     else:
-        m = np.array(board.encode())
+        # Fallback: return empty board
+        return np.full((4, 4), -1, dtype=int)
 
     # Expected one-hot layout: (1, 16, 4, 4) or (16, 4, 4)
     if m.ndim == 4 and m.shape[0] == 1:
