@@ -43,7 +43,7 @@ logger.info("Imports done.")
 AUTO_RESUME_LATEST = True
 # Optional manual override: set explicit .pt path here.
 STARTING_NET: str | None = None
-EXPERIMENT_NAME = "05_LOSS"
+EXPERIMENT_NAME = "06_ULTRA"
 CHECKPOINTS_ROOT = Path(
     os.getenv("CHECKPOINTS_ROOT", str(PROJECT_ROOT.parent / "CHECKPOINTS"))
 )
@@ -52,8 +52,8 @@ CHECKPOINT_FOLDER = str(CHECKPOINT_FOLDER_PATH)
 PLOTS_FOLDER = r"C:\Users\bravo\Documents\Metodos Numericos Pycharm\Mech Interp\Plots"
 # ARCHITECTURE = QuartoCNN
 ARCHITECTURE = QuartoCNN_uncoupled
-LOSS_APPROACH = "combined_avg"  # Options: "combined_avg", "only_select", "only_place"
-REWARD_FUNCTION = "propagate"  # "final", "propagate", "discount"
+LOSS_APPROACH = "only_select"  # Options: "combined_avg", "only_select", "only_place"
+REWARD_FUNCTION = "discount"  # "final", "propagate", "discount"
 
 # if True, experience is generated at the beginning of each epoch
 # if False, experience is generated only at the first epoch and reused for the rest of epochs
@@ -70,9 +70,9 @@ mode_2x2 = True
 EPOCHS = 3000
 
 # number of last states to consider in the experience generation at the beginning of training
-N_LAST_STATES_INIT: int = 6
+N_LAST_STATES_INIT: int = 8
 # number of last states to consider in the experience generation at the end of training. -1 means all states
-N_LAST_STATES_FINAL = 6  # 16 is all states in 4x4 board
+N_LAST_STATES_FINAL = 8  # 16 is all states in 4x4 board
 
 MATCHES_PER_EPOCH = 100  # number self-play matches per epoch
 # movs per match * #_matches per epoch (max 16, but avg less)
@@ -92,7 +92,7 @@ N_BATCHS_2_UPDATE_TARGET = ITER_PER_EPOCH // 3
 
 
 # temperature for exploration, higher values lead to more exploration
-TEMPERATURE_EXPLORE = 1.0  # view test of temperature
+TEMPERATURE_EXPLORE = 0.7  # view test of temperature
 
 # temperature for exploitation, lower values lead to more exploitation
 TEMPERATURE_EXPLOIT = 0.1
@@ -114,11 +114,11 @@ Q_PLOT_TYPE = "hist"  # Options: "time_series" or "hist"
 
 # ###########################
 MAX_GRAD_NORM = 1.0
-LR = 5e-4  # initial
+LR = 3e-4  # initial
 LR_F = 1e-5
-TAU = 0.005  # recommended value by CHATGPT
+TAU = 0.01  # recommended value by CHATGPT
 # TAU = 0.005
-GAMMA = 0.90
+GAMMA = 0.95
 
 
 def _extract_epoch_from_checkpoint(ckpt_path: str) -> int:
