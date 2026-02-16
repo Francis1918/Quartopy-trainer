@@ -58,7 +58,7 @@ GEN_EXPERIENCE_BY_EPOCH = True
 
 N_MATCHES_EVAL = 30  # number of matches to evaluate the bot at the end of each epoch for the selected BASELINES
 
-BATCH_SIZE = 30
+BATCH_SIZE = 64
 # When True, checks for winning in 2x2 squares. False, only in rows, columns and diagonals.
 mode_2x2 = True
 
@@ -66,9 +66,9 @@ mode_2x2 = True
 EPOCHS = 3000
 
 # number of last states to consider in the experience generation at the beginning of training
-N_LAST_STATES_INIT: int = 2
+N_LAST_STATES_INIT: int = 6
 # number of last states to consider in the experience generation at the end of training. -1 means all states
-N_LAST_STATES_FINAL = 2  # 16 is all states in 4x4 board
+N_LAST_STATES_FINAL = 6  # 16 is all states in 4x4 board
 
 MATCHES_PER_EPOCH = 100  # number self-play matches per epoch
 # movs per match * #_matches per epoch (max 16, but avg less)
@@ -88,7 +88,7 @@ N_BATCHS_2_UPDATE_TARGET = ITER_PER_EPOCH // 3
 
 
 # temperature for exploration, higher values lead to more exploration
-TEMPERATURE_EXPLORE = 2  # view test of temperature
+TEMPERATURE_EXPLORE = 1  # view test of temperature
 
 # temperature for exploitation, lower values lead to more exploitation
 TEMPERATURE_EXPLOIT = 0.1
@@ -108,11 +108,11 @@ Q_PLOT_TYPE = "hist"  # Options: "time_series" or "hist"
 
 # ###########################
 MAX_GRAD_NORM = 1.0
-LR = 5e-5  # initial
-LR_F = 5e-5
-TAU = 0.01  # recommended value by CHATGPT
+LR = 5e-4  # initial
+LR_F = 1e-5
+TAU = 0.005  # recommended value by CHATGPT
 # TAU = 0.005
-GAMMA = 0.99
+GAMMA = 0.90
 
 # ###########################
 # The bot at the end of each epoch will be evaluated against a limited number of rivals known as BASELINES.
