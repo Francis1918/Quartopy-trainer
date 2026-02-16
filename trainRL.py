@@ -34,7 +34,6 @@ import pickle
 from colorama import init, Fore, Style
 import socket
 from os import path
-import matplotlib.pyplot as plt
 
 # ---- PARAMS ----
 logger.info("Imports done.")
@@ -46,6 +45,7 @@ CHECKPOINTS_ROOT = Path(
     os.getenv("CHECKPOINTS_ROOT", str(PROJECT_ROOT.parent / "CHECKPOINTS"))
 )
 CHECKPOINT_FOLDER = str(CHECKPOINTS_ROOT / EXPERIMENT_NAME)
+PLOTS_FOLDER = r"C:\Users\bravo\Documents\Metodos Numericos Pycharm\Mech Interp\Plots"
 # ARCHITECTURE = QuartoCNN
 ARCHITECTURE = QuartoCNN_uncoupled
 LOSS_APPROACH = "combined_avg"  # Options: "combined_avg", "only_select", "only_place"
@@ -407,7 +407,7 @@ for e in tqdm(
             q_select=q_select,
             experiment_name=EXPERIMENT_NAME,
             FREQ_EPOCH_SAVING=FREQ_EPOCH_SAVING,
-            FOLDER_SAVE=CHECKPOINT_FOLDER,
+            FOLDER_SAVE=PLOTS_FOLDER,
             current_epoch=e + 1,
         )
 
@@ -420,14 +420,14 @@ for e in tqdm(
             PLOT_TYPE=Q_PLOT_TYPE,
             experiment_name=EXPERIMENT_NAME,
             FREQ_EPOCH_SAVING=FREQ_EPOCH_SAVING,
-            FOLDER_SAVE=CHECKPOINT_FOLDER,
+            FOLDER_SAVE=PLOTS_FOLDER,
             current_epoch=e + 1,
         )
 
         plot_win_rate(
             *win_rate.items(),
             FREQ_EPOCH_SAVING=FREQ_EPOCH_SAVING,
-            FOLDER_SAVE=CHECKPOINT_FOLDER,
+            FOLDER_SAVE=PLOTS_FOLDER,
             SMOOTHING_WINDOW=SMOOTHING_WINDOW,
             DISPLAY_PLOT=True,
             experiment_name=EXPERIMENT_NAME,
@@ -436,7 +436,7 @@ for e in tqdm(
         plot_loss(
             loss_data,
             FREQ_EPOCH_SAVING=FREQ_EPOCH_SAVING,
-            FOLDER_SAVE=CHECKPOINT_FOLDER,
+            FOLDER_SAVE=PLOTS_FOLDER,
             DISPLAY_PLOT=True,
             experiment_name=EXPERIMENT_NAME,
         )
@@ -444,6 +444,4 @@ for e in tqdm(
 
 
 logger.info("Training completed.")
-
-plt.show(block=True)
 

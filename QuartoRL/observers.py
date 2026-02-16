@@ -24,7 +24,8 @@ from utils.env_bootstrap import bootstrap_quartopy_path
 
 bootstrap_quartopy_path(PROJECT_ROOT)
 from quartopy import Board
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import numpy as np
 import torch
 import random
@@ -59,25 +60,37 @@ def _board_piece_index_grid(board: Board) -> np.ndarray:
     return np.full((4, 4), -1, dtype=int)
 
 
-def _plot_board_fallback(board: Board, ax, title: str) -> None:
-    """Fallback board visualization when quartopy Board.plot is unavailable."""
+def _add_board_trace(fig: go.Figure, board: Board, row: int, col: int) -> None:
+    """Add a board visualization to a subplot using Plotly heatmap + annotations."""
     grid = _board_piece_index_grid(board)
     occupancy = (grid >= 0).astype(float)
 
-    ax.imshow(occupancy, cmap="Greys", vmin=0, vmax=1)
-    ax.set_title(title)
-    ax.set_xticks(range(4))
-    ax.set_yticks(range(4))
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.grid(True, color="black", linewidth=0.5, alpha=0.5)
+    fig.add_trace(
+        go.Heatmap(
+            z=occupancy[::-1],  # Flip so row 0 is at top
+            colorscale=[[0, "white"], [1, "lightgray"]],
+            showscale=False,
+            hoverinfo="skip",
+        ),
+        row=row,
+        col=col,
+    )
 
+    # Add text annotations for piece indices
     for r in range(4):
         for c in range(4):
             v = grid[r, c]
             label = "." if v < 0 else str(int(v))
-            color = "black" if v < 0 else "tab:red"
-            ax.text(c, r, label, ha="center", va="center", fontsize=8, color=color)
+            color = "gray" if v < 0 else "red"
+            fig.add_annotation(
+                x=c,
+                y=3 - r,  # Flip y to match visual
+                text=label,
+                showarrow=False,
+                font=dict(size=10, color=color),
+                xref=f"x{col if col > 1 else ''}",
+                yref=f"y{((row - 1) * fig._grid_ref[0].__len__() + col) if row > 1 or col > 1 else ''}",
+            )
 
 
 def plot_boards_comp(
@@ -91,7 +104,7 @@ def plot_boards_comp(
     experiment_name: str = "",
     FREQ_EPOCH_SAVING: int = -1,
     FOLDER_SAVE: str = "./",
-    FIG_NAME=lambda epoch: f"{datetime.now().strftime('%Y%m%d_%H%M')}-boards_comp_{epoch:04d}.svg",
+    FIG_NAME=lambda epoch: f"{datetime.now().strftime('%Y%m%d_%H%M')}-boards_comp_{epoch:04d}.html",
     current_epoch: int = 0,
 ) -> None:
     """Plot pairs of boards side by side in a 2xn subplot grid (transposed).
@@ -100,17 +113,21 @@ def plot_boards_comp(
     ----------
     *boards_pair : tuple[Board, Board]
         Variable number of board pairs to compare. Typically (state, next_state).
+    q_place : torch.Tensor
+        Q-values for placement actions
+    q_select : torch.Tensor
+        Q-values for selection actions
     fig_num : int
-        Figure number to use for plotting (default: 3)
+        Kept for signature compatibility (default: 3)
     DISPLAY_PLOT : bool
-        Whether to display the plot interactively (default: True)
+        Whether to display the plot in the browser (default: True)
     MAX_BOARDS : int
         Maximum number of board pairs to display. If more pairs provided,
         randomly samples MAX_BOARDS pairs (default: 6)
     position : tuple[int, int], optional
-        (x, y) position in pixels for top-left corner of figure window
+        Kept for signature compatibility
     experiment_name : str
-        Experiment name to include in figure window title (default: "")
+        Experiment name to include in figure title (default: "")
     FREQ_EPOCH_SAVING : int
         If -1, no saving. Otherwise, save figure every n epochs (default: -1)
     FOLDER_SAVE : str
@@ -130,61 +147,94 @@ def plot_boards_comp(
         boards_pair = tuple(boards_pair[i] for i in sorted(indices))
         n = MAX_BOARDS
 
-    # Create 2xn subplot grid (transposed) with adaptive sizing
-    # Retrieve existing figure or create new one
-    experiment_name = f"{experiment_name}-{fig_num}"
-    if plt.fignum_exists(experiment_name):
-        fig = plt.figure(experiment_name)
-        fig.clf()  # Clear figure content but keep the window
-    else:
-        fig = plt.figure(experiment_name, figsize=(16, 9), constrained_layout=True)
-
-    # Set window position if specified
-    if position is not None:
-        try:
-            manager = fig.canvas.manager  # type: ignore
-            manager.window.wm_geometry(f"+{position[0]}+{position[1]}")  # type: ignore
-        except:
-            pass  # Silently fail if backend doesn't support positioning
-
-    axes = fig.subplots(2, n)
-
-    # Handle single pair case (axes won't be 2D)
-    if n == 1:
-        axes = np.array(axes).reshape(-1, 1)
-
-    # Plot each pair (transposed: rows are board states, columns are pairs)
+    # Build subplot titles
+    subplot_titles = []
     for i, (b1, b2) in enumerate(boards_pair):
         t1 = getattr(b1, "name", f"state_{i}")
         t2 = getattr(b2, "name", f"next_state_{i}")
+        subplot_titles.extend([t1, t2])
 
-        if hasattr(b1, "plot"):
-            try:
-                b1.plot(title=t1, ax=axes[0, i], show=False)  # type: ignore[attr-defined]
-            except Exception:
-                _plot_board_fallback(b1, axes[0, i], t1)
-        else:
-            _plot_board_fallback(b1, axes[0, i], t1)
+    # Reorder titles: all row1 first, then all row2
+    titles_row1 = [subplot_titles[i * 2] for i in range(n)]
+    titles_row2 = [subplot_titles[i * 2 + 1] for i in range(n)]
 
-        if hasattr(b2, "plot"):
-            try:
-                b2.plot(title=t2, ax=axes[1, i], show=False)  # type: ignore[attr-defined]
-            except Exception:
-                _plot_board_fallback(b2, axes[1, i], t2)
-        else:
-            _plot_board_fallback(b2, axes[1, i], t2)
+    fig = make_subplots(
+        rows=2,
+        cols=n,
+        subplot_titles=titles_row1 + titles_row2,
+        vertical_spacing=0.15,
+        horizontal_spacing=0.05,
+    )
+
+    for i, (b1, b2) in enumerate(boards_pair):
+        grid1 = _board_piece_index_grid(b1)
+        occupancy1 = (grid1 >= 0).astype(float)
+        grid2 = _board_piece_index_grid(b2)
+        occupancy2 = (grid2 >= 0).astype(float)
+
+        fig.add_trace(
+            go.Heatmap(
+                z=occupancy1[::-1],
+                colorscale=[[0, "white"], [1, "lightgray"]],
+                showscale=False,
+                hoverinfo="skip",
+            ),
+            row=1,
+            col=i + 1,
+        )
+
+        fig.add_trace(
+            go.Heatmap(
+                z=occupancy2[::-1],
+                colorscale=[[0, "white"], [1, "lightgray"]],
+                showscale=False,
+                hoverinfo="skip",
+            ),
+            row=2,
+            col=i + 1,
+        )
+
+        # Add piece index annotations
+        for r in range(4):
+            for c in range(4):
+                for row_idx, grid in [(1, grid1), (2, grid2)]:
+                    v = grid[r, c]
+                    label = "." if v < 0 else str(int(v))
+                    color = "gray" if v < 0 else "red"
+
+                    # Calculate axis reference names
+                    ax_idx = (row_idx - 1) * n + (i + 1)
+                    xref = "x" if ax_idx == 1 else f"x{ax_idx}"
+                    yref = "y" if ax_idx == 1 else f"y{ax_idx}"
+
+                    fig.add_annotation(
+                        x=c,
+                        y=3 - r,
+                        text=label,
+                        showarrow=False,
+                        font=dict(size=10, color=color),
+                        xref=xref,
+                        yref=yref,
+                    )
+
+    # Hide axis ticks on all subplots
+    fig.update_xaxes(showticklabels=False, showgrid=False)
+    fig.update_yaxes(showticklabels=False, showgrid=False)
+
+    fig.update_layout(
+        title_text=f"Board Comparisons - Epoch {current_epoch}",
+        showlegend=False,
+        height=600,
+        width=max(300 * n, 600),
+        template="plotly_white",
+    )
 
     # Save the figure at regular intervals
     if current_epoch % FREQ_EPOCH_SAVING == 0 and FREQ_EPOCH_SAVING != -1:
-        plt.savefig(
-            path.join(FOLDER_SAVE, FIG_NAME(current_epoch)),
-            dpi=1000,
-            bbox_inches="tight",
-        )
+        fig.write_html(path.join(FOLDER_SAVE, FIG_NAME(current_epoch)))
 
     if DISPLAY_PLOT:
-        plt.draw()
-        plt.pause(0.001)
+        fig.show()
 
 
 def plot_Qv_progress(
@@ -198,7 +248,7 @@ def plot_Qv_progress(
     experiment_name: str = "",
     FREQ_EPOCH_SAVING: int = -1,
     FOLDER_SAVE: str = "./",
-    FIG_NAME=lambda epoch: f"{datetime.now().strftime('%Y%m%d_%H%M')}-qv_progress_{epoch:04d}.svg",
+    FIG_NAME=lambda epoch: f"{datetime.now().strftime('%Y%m%d_%H%M')}-qv_progress_{epoch:04d}.html",
     current_epoch: int = 0,
 ) -> None:
     """Plot Q-value progression over epochs for each sample in the batch.
@@ -211,16 +261,18 @@ def plot_Qv_progress(
     rewards : torch.Tensor
         Target rewards for each sample (batch_size,)
     fig_num : int
-        Figure number to use for plotting (default: 4)
+        Kept for signature compatibility (default: 4)
     DISPLAY_PLOT : bool
-        Whether to display the plot interactively (default: True)
+        Whether to display the plot in the browser (default: True)
     done_v : torch.Tensor, optional
         Boolean tensor indicating whether each sample is a terminal state (batch_size,).
         Terminal states are plotted with higher prominence (thicker, more opaque lines).
+    PLOT_TYPE : str
+        Plot type: "time_series" or "hist" (default: "time_series")
     position : tuple[int, int], optional
-        (x, y) position in pixels for top-left corner of figure window
+        Kept for signature compatibility
     experiment_name : str
-        Experiment name to include in figure window title (default: "")
+        Experiment name to include in figure title (default: "")
     FREQ_EPOCH_SAVING : int
         If -1, no saving. Otherwise, save figure every n epochs (default: -1)
     FOLDER_SAVE : str
@@ -233,7 +285,6 @@ def plot_Qv_progress(
     if not q_values_history or len(q_values_history.get("q_place", [])) == 0:
         return
 
-    # Extract Q-values
     q_place_history = q_values_history.get("q_place", [])
     q_select_history = q_values_history.get("q_select", [])
 
@@ -245,87 +296,81 @@ def plot_Qv_progress(
 
     epochs = np.arange(n_epochs)
 
-    # Retrieve existing figure or create new one
-    experiment_name = f"{experiment_name}-{fig_num}"
-    if plt.fignum_exists(experiment_name):
-        fig = plt.figure(experiment_name)
-        fig.clf()
-    else:
-        fig = None  # Will be created below with appropriate size
-
-    if fig is None:
-        fig = plt.figure(experiment_name, figsize=(16, 10), constrained_layout=True)
-
-    # Set window position if specified
-    if position is not None:
-        try:
-            manager = fig.canvas.manager  # type: ignore
-            manager.window.wm_geometry(f"+{position[0]}+{position[1]}")  # type: ignore
-        except:
-            pass
-
-    axes = fig.subplots(2, 3)
-
     # Split samples by reward value (round to handle decimal rewards)
     loss_indices = [i for i in range(batch_size) if round(rewards[i].item()) == -1]
     draw_indices = [i for i in range(batch_size) if round(rewards[i].item()) == 0]
     win_indices = [i for i in range(batch_size) if round(rewards[i].item()) == 1]
 
+    subplot_titles = [
+        "Q_place: R=-1", "Q_place: R=0", "Q_place: R=1",
+        "Q_select: R=-1", "Q_select: R=0", "Q_select: R=1",
+    ]
+
+    fig = make_subplots(
+        rows=2,
+        cols=3,
+        subplot_titles=subplot_titles,
+        vertical_spacing=0.12,
+        horizontal_spacing=0.08,
+    )
+
     # Define plot configurations: (row, col, indices, q_history, title)
     plot_configs = [
-        (0, 0, loss_indices, q_place_history, "Q_place: R=-1"),
-        (0, 1, draw_indices, q_place_history, "Q_place: R=0"),
-        (0, 2, win_indices, q_place_history, "Q_place: R=1"),
-        (1, 0, loss_indices, q_select_history, "Q_select: R=-1"),
-        (1, 1, draw_indices, q_select_history, "Q_select: R=0"),
-        (1, 2, win_indices, q_select_history, "Q_select: R=1"),
+        (1, 1, loss_indices, q_place_history, "Q_place: R=-1"),
+        (1, 2, draw_indices, q_place_history, "Q_place: R=0"),
+        (1, 3, win_indices, q_place_history, "Q_place: R=1"),
+        (2, 1, loss_indices, q_select_history, "Q_select: R=-1"),
+        (2, 2, draw_indices, q_select_history, "Q_select: R=0"),
+        (2, 3, win_indices, q_select_history, "Q_select: R=1"),
     ]
 
     if PLOT_TYPE == "time_series":
-        # plot 6 aggregated curves grouped by reward value
-
         for row, col, indices, q_history, title in plot_configs:
-            ax = axes[row, col]  # type: ignore
             for i in indices:
                 q_sample = [q[i].item() for q in q_history]
                 is_terminal = done_v[i].item() if done_v is not None else False
-                ax.plot(
-                    epochs,
-                    q_sample,
-                    "-",
-                    alpha=0.3 if is_terminal else 0.15,
-                    linewidth=1.5 if is_terminal else 0.5,
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=epochs,
+                        y=q_sample,
+                        mode="lines",
+                        line=dict(
+                            width=1.5 if is_terminal else 0.5,
+                        ),
+                        opacity=0.3 if is_terminal else 0.15,
+                        showlegend=False,
+                        hoverinfo="y",
+                    ),
+                    row=row,
+                    col=col,
                 )
 
-            # Only show x-label on bottom row
-            if row == 1:
-                ax.set_xlabel("Epoch")
-            # Only show y-label on leftmost column
-            if col == 0:
-                ax.set_ylabel("Q-value")
-
-            ax.set_ylim(-1.1, 1.1)
-            ax.set_title(title)
-            ax.grid(True, alpha=0.3)
+            # Update axes
+            if row == 2:
+                fig.update_xaxes(title_text="Epoch", row=row, col=col)
+            if col == 1:
+                fig.update_yaxes(title_text="Q-value", row=row, col=col)
+            fig.update_yaxes(range=[-1.1, 1.1], row=row, col=col)
 
     elif PLOT_TYPE == "hist":
-        # Create histogram evolution plots showing Q-value distribution over epochs
         HIST_BINS = 50
         HIST_RANGE = (-1.1, 1.1)
 
         for row, col, indices, q_history, title in plot_configs:
-            ax = axes[row, col]  # type: ignore
-
-            if not indices:  # Skip if no samples in this group
-                ax.text(
-                    0.5,
-                    0.5,
-                    "No samples",
-                    ha="center",
-                    va="center",
-                    transform=ax.transAxes,
+            if not indices:
+                # Add placeholder annotation for empty groups
+                ax_idx = (row - 1) * 3 + col
+                xref = "x" if ax_idx == 1 else f"x{ax_idx}"
+                yref = "y" if ax_idx == 1 else f"y{ax_idx}"
+                fig.add_annotation(
+                    text="No samples",
+                    xref=xref,
+                    yref=yref,
+                    x=0.5,
+                    y=0,
+                    showarrow=False,
                 )
-                ax.set_title(title)
                 continue
 
             # Compute histograms for this reward group across epochs
@@ -333,39 +378,43 @@ def plot_Qv_progress(
             for q_epoch in q_history:
                 q_subset = q_epoch[indices].detach().cpu().numpy().flatten()
                 hist, _ = np.histogram(q_subset, bins=HIST_BINS, range=HIST_RANGE)
-                # Normalize to percentage
                 hist_percent = (hist / hist.sum()) * 100 if hist.sum() > 0 else hist
                 hist_data.append(hist_percent)
 
-            # Plot histogram evolution
             if hist_data:
                 hist_array = np.array(hist_data)
-                im = ax.imshow(
-                    hist_array.T,
-                    aspect="auto",
-                    origin="lower",
-                    cmap="viridis",
-                    interpolation="nearest",
-                    extent=[0, n_epochs, HIST_RANGE[0], HIST_RANGE[1]],
+                bin_centers = np.linspace(HIST_RANGE[0], HIST_RANGE[1], HIST_BINS)
+
+                fig.add_trace(
+                    go.Heatmap(
+                        z=hist_array.T,
+                        x=epochs,
+                        y=bin_centers,
+                        colorscale="Viridis",
+                        showscale=(row == 1 and col == 3),
+                        colorbar=dict(title="% ", len=0.4, y=0.78) if (row == 1 and col == 3) else None,
+                    ),
+                    row=row,
+                    col=col,
                 )
-                # Only show x-label on bottom row
-                if row == 1:
-                    ax.set_xlabel("Epoch")
-                # Only show y-label on leftmost column
-                if col == 0:
-                    ax.set_ylabel("Q-value")
-                ax.set_title(title)
-                ax.grid(True, alpha=0.3)
-                plt.colorbar(im, ax=ax, label="Percentage (%)")
+
+            # Update axes
+            if row == 2:
+                fig.update_xaxes(title_text="Epoch", row=row, col=col)
+            if col == 1:
+                fig.update_yaxes(title_text="Q-value", row=row, col=col)
+
+    fig.update_layout(
+        title_text=f"Q-value Progress - Epoch {current_epoch}",
+        height=800,
+        width=1200,
+        showlegend=False,
+        template="plotly_white",
+    )
 
     # Save the figure at regular intervals
     if current_epoch % FREQ_EPOCH_SAVING == 0 and FREQ_EPOCH_SAVING != -1:
-        plt.savefig(
-            path.join(FOLDER_SAVE, FIG_NAME(current_epoch)),
-            dpi=1000,
-            bbox_inches="tight",
-        )
+        fig.write_html(path.join(FOLDER_SAVE, FIG_NAME(current_epoch)))
 
     if DISPLAY_PLOT:
-        plt.draw()
-        plt.pause(0.001)
+        fig.show()

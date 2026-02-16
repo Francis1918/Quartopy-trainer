@@ -13,12 +13,14 @@ Python 3
 -Kurt Godël
 """
 
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.colors
 import numpy as np
 from os import path
 from datetime import datetime
 
-plt.ion()  # Enable interactive mode
+# Default plotly color palette
+_COLORS = plotly.colors.qualitative.Plotly
 
 
 def plot_win_rate(
@@ -26,7 +28,7 @@ def plot_win_rate(
     SMOOTHING_WINDOW: int = 5,
     FREQ_EPOCH_SAVING: int = 1,
     FOLDER_SAVE: str = "./",
-    FIG_NAME=lambda epoch: f"{datetime.now().strftime('%Y%m%d_%H%M')}-win_rate_{epoch:04d}.svg",
+    FIG_NAME=lambda epoch: f"{datetime.now().strftime('%Y%m%d_%H%M')}-win_rate_{epoch:04d}.html",
     DISPLAY_PLOT: bool = False,
     fig_num: int = 1,
     position: tuple[int, int] | None = (500, 600),
@@ -47,50 +49,38 @@ def plot_win_rate(
     FIG_NAME : callable
         Lambda function that generates filename given epoch number
     DISPLAY_PLOT : bool
-        Whether to display the plot interactively (default: False)
+        Whether to display the plot in the browser (default: False)
     fig_num : int
-        Figure number to use for plotting (default: 1)
+        Kept for signature compatibility (default: 1)
     position : tuple[int, int], optional
-        (x, y) position in pixels for top-left corner of figure window
+        Kept for signature compatibility
     experiment_name : str
-        Experiment name to include in figure window title (default: "")
+        Experiment name to include in figure title (default: "")
     """
-    if not DISPLAY_PLOT:
-        plt.ioff()  # Disable interactive mode
+    fig = go.Figure()
 
-    # Retrieve existing figure or create new one
-    experiment_name = f"{experiment_name}-{fig_num}"
-    if plt.fignum_exists(experiment_name):
-        fig = plt.figure(experiment_name)
-        fig.clf()  # Clear figure content but keep the window
-    else:
-        fig = plt.figure(experiment_name, figsize=(8, 6))
+    last_win_rates_len = 0
+    for idx, (rival_name, win_rates) in enumerate(args):
+        color = _COLORS[idx % len(_COLORS)]
+        # Convert hex color to rgb tuple for fill
+        rgb = plotly.colors.hex_to_rgb(color)
 
-    # Set window position if specified
-    if position is not None:
-        try:
-            manager = fig.canvas.manager  # type: ignore
-            manager.window.wm_geometry(f"+{position[0]}+{position[1]}")  # type: ignore
-        except:
-            pass
-
-    for rival_name, win_rates in args:
         epochs_arr = np.arange(len(win_rates))
         win_rates_arr = np.array(win_rates)
+        last_win_rates_len = len(win_rates)
 
         # Scatter plot of raw data
-        plt.scatter(
-            epochs_arr,
-            win_rates_arr,
-            marker="o",  # type: ignore
-            s=10,
-            linestyle="",
-            alpha=0.3,
-            label=f"vs {rival_name}",
-        )
+        fig.add_trace(go.Scatter(
+            x=epochs_arr,
+            y=win_rates_arr,
+            mode="markers",
+            marker=dict(size=5, opacity=0.3, color=color),
+            name=f"vs {rival_name}",
+            legendgroup=str(rival_name),
+            showlegend=True,
+        ))
 
         if SMOOTHING_WINDOW > 1 and len(win_rates) >= SMOOTHING_WINDOW:
-            # Calculate smoothed mean
             smoothed = np.convolve(
                 win_rates_arr,
                 np.ones(SMOOTHING_WINDOW) / SMOOTHING_WINDOW,
@@ -99,54 +89,69 @@ def plot_win_rate(
             offset = SMOOTHING_WINDOW - 1
             smoothed_epochs = np.arange(offset // 2, len(smoothed) + offset // 2)
 
-            # Calculate rolling std for error band
             window_stds = []
             for i in range(len(smoothed)):
                 window_data = win_rates_arr[i : i + SMOOTHING_WINDOW]
                 window_stds.append(np.std(window_data))
-            window_stds = np.array(window_stds)
+            window_stds_arr = np.array(window_stds)
 
-            # Plot smoothed line
-            line = plt.plot(
-                smoothed_epochs,
-                smoothed,
-                alpha=0.8,
-                linewidth=2,
-            )[0]
+            # Smoothed line
+            fig.add_trace(go.Scatter(
+                x=smoothed_epochs,
+                y=smoothed,
+                mode="lines",
+                line=dict(width=2, color=color),
+                name=f"vs {rival_name} (smooth)",
+                legendgroup=str(rival_name),
+                showlegend=False,
+            ))
 
-            # Add std error band with same color as line
-            plt.fill_between(
-                smoothed_epochs,
-                smoothed - window_stds,  # type: ignore
-                smoothed + window_stds,  # type: ignore
-                alpha=0.2,
-                color=line.get_color(),
-            )
+            # Upper bound (invisible)
+            fig.add_trace(go.Scatter(
+                x=smoothed_epochs,
+                y=smoothed + window_stds_arr,
+                mode="lines",
+                line=dict(width=0),
+                legendgroup=str(rival_name),
+                showlegend=False,
+                hoverinfo="skip",
+            ))
 
-    plt.xlabel("Training epochs")
-    plt.ylabel("Win rate")
-    plt.title(f"Win rate of the epoch player vs rivals")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    if DISPLAY_PLOT:
-        plt.draw()
-        plt.pause(0.001)
+            # Lower bound with fill to upper
+            fig.add_trace(go.Scatter(
+                x=smoothed_epochs,
+                y=smoothed - window_stds_arr,
+                fill="tonexty",
+                mode="lines",
+                line=dict(width=0),
+                fillcolor=f"rgba({rgb[0]},{rgb[1]},{rgb[2]},0.2)",
+                legendgroup=str(rival_name),
+                showlegend=False,
+                hoverinfo="skip",
+            ))
+
+    fig.update_layout(
+        title="Win rate of the epoch player vs rivals",
+        xaxis_title="Training epochs",
+        yaxis_title="Win rate",
+        hovermode="closest",
+        template="plotly_white",
+        showlegend=True,
+    )
 
     # Save the figure at regular intervals
-    if len(win_rates) % FREQ_EPOCH_SAVING == 0 and FREQ_EPOCH_SAVING != -1:
-        plt.savefig(
-            path.join(FOLDER_SAVE, FIG_NAME(len(win_rates))),
-            dpi=1000,
-            bbox_inches="tight",
-        )
+    if last_win_rates_len % FREQ_EPOCH_SAVING == 0 and FREQ_EPOCH_SAVING != -1:
+        fig.write_html(path.join(FOLDER_SAVE, FIG_NAME(last_win_rates_len)))
+
+    if DISPLAY_PLOT:
+        fig.show()
 
 
 def plot_loss(
     loss_data: dict[str, list[float | int]],
     FREQ_EPOCH_SAVING: int = 200,
     FOLDER_SAVE: str = "./",
-    FIG_NAME=lambda epoch: f"{datetime.now().strftime('%Y%m%d_%H%M')}-loss_{epoch:04d}.svg",
+    FIG_NAME=lambda epoch: f"{datetime.now().strftime('%Y%m%d_%H%M')}-loss_{epoch:04d}.html",
     DISPLAY_PLOT: bool = False,
     fig_num: int = 2,
     position: tuple[int, int] | None = (0, 600),
@@ -167,34 +172,16 @@ def plot_loss(
     FIG_NAME : callable
         Lambda function that generates filename given epoch number
     DISPLAY_PLOT : bool
-        Whether to display the plot interactively (default: False)
+        Whether to display the plot in the browser (default: False)
     fig_num : int
-        Figure number to use for plotting (default: 2)
+        Kept for signature compatibility (default: 2)
     position : tuple[int, int], optional
-        (x, y) position in pixels for top-left corner of figure window
+        Kept for signature compatibility
     experiment_name : str
-        Experiment name to include in figure window title (default: "")
+        Experiment name to include in figure title (default: "")
     """
-    if not DISPLAY_PLOT:
-        plt.ioff()  # Disable interactive mode
     epoch_values = loss_data["epoch_values"]
     loss_values = loss_data["loss_values"]
-
-    # Retrieve existing figure or create new one
-    experiment_name = f"{experiment_name}-{fig_num}"
-    if plt.fignum_exists(experiment_name):
-        fig = plt.figure(experiment_name)
-        fig.clf()  # Clear figure content but keep the window
-    else:
-        fig = plt.figure(experiment_name, figsize=(10, 5))
-
-    # Set window position if specified
-    if position is not None:
-        try:
-            manager = fig.canvas.manager  # type: ignore
-            manager.window.wm_geometry(f"+{position[0]}+{position[1]}")  # type: ignore
-        except:
-            pass
 
     # Calculate mean and std for each epoch
     n_epochs = len(epoch_values)
@@ -202,11 +189,8 @@ def plot_loss(
     epoch_stds = []
 
     for i in range(n_epochs):
-        # Get start and end indices for this epoch
         start_idx = epoch_values[i]
         end_idx = epoch_values[i + 1] if i + 1 < n_epochs else len(loss_values)
-
-        # Extract losses for this epoch
         epoch_losses = loss_values[start_idx:end_idx]
 
         if len(epoch_losses) > 0:
@@ -220,36 +204,53 @@ def plot_loss(
     epoch_stds = np.array(epoch_stds)
     epochs = np.arange(n_epochs)
 
-    # Plot mean loss line with std error band
-    line = plt.plot(
-        epochs, epoch_means, ".-", alpha=0.8, linewidth=2, label="Mean loss"
-    )[0]
-    plt.fill_between(
-        epochs,
-        epoch_means - epoch_stds,  # type: ignore
-        epoch_means + epoch_stds,  # type: ignore
-        alpha=0.3,
-        color=line.get_color(),
-        label="±1 std dev",
-    )
+    fig = go.Figure()
 
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title(f"Training Loss up to epoch {n_epochs}")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    if DISPLAY_PLOT:
-        plt.draw()
-        plt.pause(0.001)
+    # Upper bound (invisible)
+    fig.add_trace(go.Scatter(
+        x=epochs,
+        y=epoch_means + epoch_stds,
+        mode="lines",
+        line=dict(width=0),
+        showlegend=False,
+        hoverinfo="skip",
+    ))
+
+    # Lower bound with fill
+    fig.add_trace(go.Scatter(
+        x=epochs,
+        y=epoch_means - epoch_stds,
+        fill="tonexty",
+        mode="lines",
+        line=dict(width=0),
+        fillcolor="rgba(99,110,250,0.3)",
+        name="\u00b11 std dev",
+    ))
+
+    # Mean line with markers
+    fig.add_trace(go.Scatter(
+        x=epochs,
+        y=epoch_means,
+        mode="lines+markers",
+        line=dict(width=2, color="#636EFA"),
+        marker=dict(size=4),
+        name="Mean loss",
+    ))
+
+    fig.update_layout(
+        title=f"Training Loss up to epoch {n_epochs}",
+        xaxis_title="Epoch",
+        yaxis_title="Loss",
+        hovermode="closest",
+        template="plotly_white",
+    )
 
     # Save the figure at regular intervals
     if n_epochs % FREQ_EPOCH_SAVING == 0 and FREQ_EPOCH_SAVING != -1:
-        plt.savefig(
-            path.join(FOLDER_SAVE, FIG_NAME(n_epochs)),
-            dpi=1000,
-            bbox_inches="tight",
-        )
+        fig.write_html(path.join(FOLDER_SAVE, FIG_NAME(n_epochs)))
+
+    if DISPLAY_PLOT:
+        fig.show()
 
 
 def plot_contest_results(epochs_results: list[dict[int, dict[str, int]]]):
@@ -257,9 +258,7 @@ def plot_contest_results(epochs_results: list[dict[int, dict[str, int]]]):
 
     _n_epochs = len(epochs_results)
     _n_rivals = _n_epochs
-    # Assuming rivals are from previous epochs
 
-    # Win rate by epoch and rival
     win_rate = np.full((_n_epochs, _n_rivals), np.nan)
 
     for player_id, player_results in enumerate(epochs_results):
@@ -275,21 +274,19 @@ def plot_contest_results(epochs_results: list[dict[int, dict[str, int]]]):
 
             win_rate[player_id, rival_id] = _w_rate
 
-    # Retrieve existing figure or create new one
-    if plt.fignum_exists(1):
-        fig = plt.figure(1)
-        fig.clf()
-    else:
-        fig = plt.figure(1, figsize=(8, 6))
+    fig = go.Figure(data=go.Heatmap(
+        z=win_rate,
+        colorscale="Viridis",
+        zmin=0,
+        zmax=1,
+        colorbar=dict(title="Win Rate"),
+    ))
 
-    im = plt.imshow(win_rate, aspect="auto", interpolation="none", cmap="viridis")
-    plt.colorbar(im, label="Win Rate", extend="neither")
-    im.set_clim(0, 1)
-    plt.xlabel("Rival")
-    plt.ylabel("Epoch")
-    # plt.xticks(ticks=range(_n_rivals))
-    # plt.yticks(ticks=range(_n_epochs))
-    plt.title("Win Rate by Epoch vs Rival")
-    plt.tight_layout()
-    plt.draw()
-    plt.pause(0.001)
+    fig.update_layout(
+        title="Win Rate by Epoch vs Rival",
+        xaxis_title="Rival",
+        yaxis_title="Epoch",
+        template="plotly_white",
+    )
+
+    fig.show()

@@ -4,7 +4,8 @@
       "Bash(cd:*)",
       "Bash(done)",
       "Bash(\"/c/Users/bravo/Documents/Metodos Numericos:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(pip install:*)"
     ]
   }
 }
