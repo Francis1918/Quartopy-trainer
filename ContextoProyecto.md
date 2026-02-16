@@ -156,9 +156,9 @@ Si la posicion o pieza elegida no es valida (celda ocupada o pieza ya usada), se
 
 | Parametro | Valor | Efecto |
 |-----------|-------|--------|
-| LR = LR_F = 5e-5 | Sin decay | Learning rate constante (sin cosine annealing) |
-| N_LAST_STATES = 2 | Sin curriculum | Solo aprende de los 2 ultimos estados de cada partida |
-| GAMMA = 0.99 | Alto descuento | Valora mucho las recompensas futuras |
-| TAU = 0.01 | Soft update lento | Target network se actualiza gradualmente |
+| LR = LR_F = 5e-4 y 1e-5 | Sin decay | Learning rate constante (sin cosine annealing) |
+| N_LAST_STATES = 6 | Sin curriculum | Solo aprende de los 2 ultimos estados de cada partida |
+| GAMMA = 0.9 | Alto descuento | Valora mucho las recompensas futuras |
+| TAU = 0.005 | Soft update lento | Target network se actualiza gradualmente |
 | REPLAY_SIZE = 20,000 | ~100 epocas de historial | Buffer de experiencia moderado |
 | Seed = 5 | Reproducible | Misma semilla para reproducibilidad |
