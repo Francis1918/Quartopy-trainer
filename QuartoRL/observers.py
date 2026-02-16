@@ -287,19 +287,24 @@ def plot_Qv_progress(
 
     q_place_history = q_values_history.get("q_place", [])
     q_select_history = q_values_history.get("q_select", [])
+    rewards_history = q_values_history.get("rewards", [])
+    done_history = q_values_history.get("done", [])
 
-    batch_size = q_place_history[0].shape[0] if q_place_history else 0
     n_epochs = len(q_place_history)
 
-    if batch_size == 0:
+    if n_epochs == 0:
         return
 
     epochs = np.arange(n_epochs)
 
-    # Split samples by reward value (round to handle decimal rewards)
-    loss_indices = [i for i in range(batch_size) if round(rewards[i].item()) == -1]
-    draw_indices = [i for i in range(batch_size) if round(rewards[i].item()) == 0]
-    win_indices = [i for i in range(batch_size) if round(rewards[i].item()) == 1]
+    def _get_indices_for_epoch(epoch_idx, reward_val):
+        """Compute sample indices for a given reward value at a specific epoch."""
+        if epoch_idx < len(rewards_history):
+            r = rewards_history[epoch_idx]
+        else:
+            r = rewards
+        size = min(r.shape[0], q_place_history[epoch_idx].shape[0])
+        return [i for i in range(size) if round(r[i].item()) == reward_val]
 
     subplot_titles = [
         "Q_place: R=-1", "Q_place: R=0", "Q_place: R=1",
@@ -314,21 +319,33 @@ def plot_Qv_progress(
         horizontal_spacing=0.08,
     )
 
-    # Define plot configurations: (row, col, indices, q_history, title)
+    # Define plot configurations: (row, col, reward_val, q_history, title)
     plot_configs = [
-        (1, 1, loss_indices, q_place_history, "Q_place: R=-1"),
-        (1, 2, draw_indices, q_place_history, "Q_place: R=0"),
-        (1, 3, win_indices, q_place_history, "Q_place: R=1"),
-        (2, 1, loss_indices, q_select_history, "Q_select: R=-1"),
-        (2, 2, draw_indices, q_select_history, "Q_select: R=0"),
-        (2, 3, win_indices, q_select_history, "Q_select: R=1"),
+        (1, 1, -1, q_place_history, "Q_place: R=-1"),
+        (1, 2, 0, q_place_history, "Q_place: R=0"),
+        (1, 3, 1, q_place_history, "Q_place: R=1"),
+        (2, 1, -1, q_select_history, "Q_select: R=-1"),
+        (2, 2, 0, q_select_history, "Q_select: R=0"),
+        (2, 3, 1, q_select_history, "Q_select: R=1"),
     ]
 
     if PLOT_TYPE == "time_series":
-        for row, col, indices, q_history, title in plot_configs:
+        # Use last epoch's indices for time_series (best available)
+        last_indices = {
+            -1: _get_indices_for_epoch(n_epochs - 1, -1),
+            0: _get_indices_for_epoch(n_epochs - 1, 0),
+            1: _get_indices_for_epoch(n_epochs - 1, 1),
+        }
+        last_done = done_history[-1] if done_history else done_v
+
+        for row, col, reward_val, q_history, title in plot_configs:
+            indices = last_indices[reward_val]
             for i in indices:
-                q_sample = [q[i].item() for q in q_history]
-                is_terminal = done_v[i].item() if done_v is not None else False
+                q_sample = [
+                    q[i].item() if i < q.shape[0] else float("nan")
+                    for q in q_history
+                ]
+                is_terminal = last_done[i].item() if last_done is not None and i < last_done.shape[0] else False
 
                 fig.add_trace(
                     go.Scatter(
@@ -357,9 +374,22 @@ def plot_Qv_progress(
         HIST_BINS = 50
         HIST_RANGE = (-1.1, 1.1)
 
-        for row, col, indices, q_history, title in plot_configs:
-            if not indices:
-                # Add placeholder annotation for empty groups
+        for row, col, reward_val, q_history, title in plot_configs:
+            # Compute histograms for this reward group across epochs
+            hist_data = []
+            has_any_data = False
+            for epoch_idx, q_epoch in enumerate(q_history):
+                indices = _get_indices_for_epoch(epoch_idx, reward_val)
+                if not indices:
+                    hist_data.append(np.zeros(HIST_BINS))
+                    continue
+                has_any_data = True
+                q_subset = q_epoch[indices].detach().cpu().numpy().flatten()
+                hist, _ = np.histogram(q_subset, bins=HIST_BINS, range=HIST_RANGE)
+                hist_percent = (hist / hist.sum()) * 100 if hist.sum() > 0 else hist
+                hist_data.append(hist_percent)
+
+            if not has_any_data:
                 ax_idx = (row - 1) * 3 + col
                 xref = "x" if ax_idx == 1 else f"x{ax_idx}"
                 yref = "y" if ax_idx == 1 else f"y{ax_idx}"
@@ -373,30 +403,21 @@ def plot_Qv_progress(
                 )
                 continue
 
-            # Compute histograms for this reward group across epochs
-            hist_data = []
-            for q_epoch in q_history:
-                q_subset = q_epoch[indices].detach().cpu().numpy().flatten()
-                hist, _ = np.histogram(q_subset, bins=HIST_BINS, range=HIST_RANGE)
-                hist_percent = (hist / hist.sum()) * 100 if hist.sum() > 0 else hist
-                hist_data.append(hist_percent)
+            hist_array = np.array(hist_data)
+            bin_centers = np.linspace(HIST_RANGE[0], HIST_RANGE[1], HIST_BINS)
 
-            if hist_data:
-                hist_array = np.array(hist_data)
-                bin_centers = np.linspace(HIST_RANGE[0], HIST_RANGE[1], HIST_BINS)
-
-                fig.add_trace(
-                    go.Heatmap(
-                        z=hist_array.T,
-                        x=epochs,
-                        y=bin_centers,
-                        colorscale="Viridis",
-                        showscale=(row == 1 and col == 3),
-                        colorbar=dict(title="% ", len=0.4, y=0.78) if (row == 1 and col == 3) else None,
-                    ),
-                    row=row,
-                    col=col,
-                )
+            fig.add_trace(
+                go.Heatmap(
+                    z=hist_array.T,
+                    x=epochs,
+                    y=bin_centers,
+                    colorscale="Viridis",
+                    showscale=(row == 1 and col == 3),
+                    colorbar=dict(title="% ", len=0.4, y=0.78) if (row == 1 and col == 3) else None,
+                ),
+                row=row,
+                col=col,
+            )
 
             # Update axes
             if row == 2:

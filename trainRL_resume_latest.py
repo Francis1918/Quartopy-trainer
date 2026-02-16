@@ -198,6 +198,8 @@ win_rate: dict[str | int, list[float]] = {}  # list of win rates of epochs by ri
 q_values_history: dict[str, list] = {
     "q_place": [],
     "q_select": [],
+    "rewards": [],
+    "done": [],
 }  # Track Q-values over epochs
 
 # ###########################
@@ -399,6 +401,8 @@ for e in tqdm(
 
     q_values_history["q_place"].append(q_place)
     q_values_history["q_select"].append(q_select)
+    q_values_history["rewards"].append(exp["reward"].clone())
+    q_values_history["done"].append(exp["done"].clone())
 
     loss_data["epoch_values"].append(step_i)
 
