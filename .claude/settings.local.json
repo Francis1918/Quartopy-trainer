@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(cd:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(\"/c/Users/bravo/Documents/Metodos Numericos:*)"
     ]
   }
 }
