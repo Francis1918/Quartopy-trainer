@@ -3,7 +3,8 @@
     "allow": [
       "Bash(cd:*)",
       "Bash(done)",
-      "Bash(\"/c/Users/bravo/Documents/Metodos Numericos:*)"
+      "Bash(\"/c/Users/bravo/Documents/Metodos Numericos:*)",
+      "Bash(python:*)"
     ]
   }
 }
