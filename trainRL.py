@@ -40,7 +40,7 @@ logger.info("Imports done.")
 
 # STARTING_NET = "CHECKPOINTS//REF//20251023_1649-_E02_win_rate_epoch_0022.pt"
 STARTING_NET = None  # Set to None to start with random weights
-EXPERIMENT_NAME = "06_ULTRA"
+EXPERIMENT_NAME = "07_COMBINED_DISCOUNT"
 CHECKPOINTS_ROOT = Path(
     os.getenv("CHECKPOINTS_ROOT", str(PROJECT_ROOT.parent / "CHECKPOINTS"))
 )
@@ -48,7 +48,7 @@ CHECKPOINT_FOLDER = str(CHECKPOINTS_ROOT / EXPERIMENT_NAME)
 PLOTS_FOLDER = r"C:\Users\bravo\Documents\Metodos Numericos Pycharm\Mech Interp\Plots"
 # ARCHITECTURE = QuartoCNN
 ARCHITECTURE = QuartoCNN_uncoupled
-LOSS_APPROACH = "only_select"  # Options: "combined_avg", "only_select", "only_place"
+LOSS_APPROACH = "combined_avg"  # Options: "combined_avg", "only_select", "only_place"
 REWARD_FUNCTION = "discount"  # "final", "propagate", "discount"
 
 # if True, experience is generated at the beginning of each epoch
