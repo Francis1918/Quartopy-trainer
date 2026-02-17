@@ -43,7 +43,7 @@ logger.info("Imports done.")
 AUTO_RESUME_LATEST = True
 # Optional manual override: set explicit .pt path here.
 STARTING_NET: str | None = None
-EXPERIMENT_NAME = "06_ULTRA"
+EXPERIMENT_NAME = "07_COMBINED_DISCOUNT"
 CHECKPOINTS_ROOT = Path(
     os.getenv("CHECKPOINTS_ROOT", str(PROJECT_ROOT.parent / "CHECKPOINTS"))
 )
@@ -52,7 +52,7 @@ CHECKPOINT_FOLDER = str(CHECKPOINT_FOLDER_PATH)
 PLOTS_FOLDER = r"C:\Users\bravo\Documents\Metodos Numericos Pycharm\Mech Interp\Plots"
 # ARCHITECTURE = QuartoCNN
 ARCHITECTURE = QuartoCNN_uncoupled
-LOSS_APPROACH = "only_select"  # Options: "combined_avg", "only_select", "only_place"
+LOSS_APPROACH = "combined_avg"  # Options: "combined_avg", "only_select", "only_place"
 REWARD_FUNCTION = "discount"  # "final", "propagate", "discount"
 
 # if True, experience is generated at the beginning of each epoch
